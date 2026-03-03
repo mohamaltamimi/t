@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { seedDatabase } from "@/lib/seed";
 import { signToken } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
@@ -10,6 +11,9 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
+
+    // Auto-seed if DB is empty (for Vercel cold starts)
+    await seedDatabase();
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {

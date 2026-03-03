@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { seedDatabase } from "@/lib/seed";
 import { getCurrentUser } from "@/lib/auth";
 import PageHeader from "@/components/PageHeader";
 import StatsCard from "@/components/StatsCard";
@@ -6,6 +7,9 @@ import Link from "next/link";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
+
+  // Auto-seed on first visit (for Vercel deployments)
+  await seedDatabase();
 
   const [taskCount, checklistCount, auditCount, sopCount, locationCount, userCount, trainingCount] =
     await Promise.all([
