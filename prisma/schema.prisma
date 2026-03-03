@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("frontline") // admin, manager, frontline
+  avatar    String?
+  locationId String?
+  location  Location? @relation(fields: [locationId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedTasks   Task[]          @relation("AssignedTo")
+  createdTasks    Task[]          @relation("CreatedBy")
+  auditResponses  AuditResponse[]
+  checklistResponses ChecklistResponse[]
+  trainingProgress TrainingProgress[]
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  city      String
+  region    String
+  type      String   @default("store") // store, restaurant, office, warehouse
+  status    String   @default("active") // active, inactive
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  tasks      Task[]
+  audits     Audit[]
+  checklists Checklist[]
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      String   @default("pending") // pending, in_progress, completed, overdue
+  priority    String   @default("medium") // low, medium, high, urgent
+  dueDate     DateTime?
+  assigneeId  String?
+  assignee    User?    @relation("AssignedTo", fields: [assigneeId], references: [id])
+  creatorId   String
+  creator     User     @relation("CreatedBy", fields: [creatorId], references: [id])
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id])
+  category    String   @default("general")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SOP {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  content     String
+  category    String
+  version     String   @default("1.0")
+  status      String   @default("draft") // draft, published, archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Checklist {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  category    String
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id])
+  frequency   String   @default("daily") // daily, weekly, monthly
+  status      String   @default("active") // active, inactive
+  items       ChecklistItem[]
+  responses   ChecklistResponse[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ChecklistItem {
+  id          String   @id @default(uuid())
+  checklistId String
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  label       String
+  type        String   @default("checkbox") // checkbox, text, number, photo
+  required    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+}
+
+model ChecklistResponse {
+  id          String   @id @default(uuid())
+  checklistId String
+  checklist   Checklist @relation(fields: [checklistId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  data        String   // JSON string of responses
+  score       Float?
+  completedAt DateTime @default(now())
+}
+
+model Audit {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  category    String
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id])
+  status      String   @default("active") // active, inactive
+  questions   AuditQuestion[]
+  responses   AuditResponse[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditQuestion {
+  id       String @id @default(uuid())
+  auditId  String
+  audit    Audit  @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  question String
+  type     String @default("yes_no") // yes_no, rating, text, photo
+  weight   Float  @default(1.0)
+  sortOrder Int   @default(0)
+}
+
+model AuditResponse {
+  id          String   @id @default(uuid())
+  auditId     String
+  audit       Audit    @relation(fields: [auditId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  data        String   // JSON string of responses
+  score       Float?
+  completedAt DateTime @default(now())
+}
+
+model Training {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  content     String
+  category    String
+  duration    Int      @default(30) // minutes
+  status      String   @default("published") // draft, published, archived
+  modules     TrainingModule[]
+  progress    TrainingProgress[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TrainingModule {
+  id         String   @id @default(uuid())
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  title      String
+  content    String
+  type       String   @default("lesson") // lesson, quiz, video
+  sortOrder  Int      @default(0)
+}
+
+model TrainingProgress {
+  id         String   @id @default(uuid())
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  status     String   @default("not_started") // not_started, in_progress, completed
+  score      Float?
+  startedAt  DateTime @default(now())
+  completedAt DateTime?
+}
